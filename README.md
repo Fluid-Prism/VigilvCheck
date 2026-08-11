@@ -1,11 +1,15 @@
 # VigilvCheck
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 A local desktop app that checks this machine against a set of well-known
 hardening basics, scores what it can actually determine, and explains each
 gap in plain English with a copy-paste fix. It's the sibling to
 [Kevscope](https://github.com/Fluid-Prism/Kevscope): Kevscope answers "what
 vulnerable software is on this machine," VigilvCheck answers "is this machine
 configured to resist an attack in the first place."
+
+![VigilvCheck app](./docs/preview.png)
 
 It runs on the machine you launch it on. Nothing is uploaded anywhere —
 every check is a local read, and the only thing this app writes is its own

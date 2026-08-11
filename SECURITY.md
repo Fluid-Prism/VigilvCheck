@@ -12,8 +12,8 @@ is deliberate.
 
 Please **do not open a public GitHub issue** for a security report.
 
-Use GitHub's private vulnerability reporting instead, once this repo has a
-public home: repo → Security → Report a vulnerability.
+Use GitHub's private vulnerability reporting instead: repo → Security →
+Report a vulnerability.
 
 If that isn't available, email **godambevarun@gmail.com** with a
 description and, if possible, a minimal reproduction. We'll acknowledge

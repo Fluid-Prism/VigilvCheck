@@ -1,6 +1,3 @@
-vigilvcheck.db
-vigilvcheck.db-shm
-vigilvcheck.db-wal
 __pycache__/
 *.pyc
 .venv/
