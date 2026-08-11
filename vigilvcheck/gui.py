@@ -310,6 +310,11 @@ class MainWindow(QMainWindow):
             pass
         return "dark"
 
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self._rendered_rows:
+            self.table.resizeRowsToContents()
+
     def _build_ui(self):
         root = QWidget()
         self.setCentralWidget(root)
@@ -604,6 +609,11 @@ class MainWindow(QMainWindow):
                 if result.status == STATUS_FAIL:
                     it.setBackground(QColor(c["row_fail_bg"]))
                 self.table.setItem(i, j, it)
+        # Row height defaults to a single line regardless of content — a Detail
+        # cell long enough to wrap gets its extra lines silently cut off unless
+        # this runs after every populate (and again on resize: the Detail
+        # column is Stretch-sized, so the wrap point moves with the window).
+        self.table.resizeRowsToContents()
 
     def _recolor_table(self):
         c = self.c
