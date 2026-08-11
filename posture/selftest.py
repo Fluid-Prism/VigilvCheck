@@ -7,7 +7,7 @@ test can assert against the way a version comparator can.
 """
 from .checks import ALL_CHECKS
 from .checks.base import SEVERITY_WEIGHT, STATUS_FAIL, STATUS_NA, STATUS_PASS, STATUS_UNKNOWN, Check, CheckResult
-from .scoring import ranked_gaps, score
+from .scoring import ranked_gaps, run_all, score
 
 
 def _fake(severity, status):
@@ -51,6 +51,20 @@ def check_ranked_gaps_severity_order():
     return 1
 
 
+def check_run_all_isolates_a_broken_check():
+    def broken_read():
+        raise ValueError("simulated bug")
+    bad = Check(id="bad", title="Bad", rationale="x", severity="low", cis_topic="x",
+               read=broken_read, remediation=lambda: "x")
+    good = Check(id="good", title="Good", rationale="x", severity="low", cis_topic="x",
+                read=lambda: CheckResult(STATUS_PASS, "fine"), remediation=lambda: "x")
+    results = run_all([good, bad])
+    by_id = {c.id: r for c, r in results}
+    assert by_id["good"].status == STATUS_PASS, "a bug in one check corrupted an unrelated one"
+    assert by_id["bad"].status == STATUS_UNKNOWN, "an unexpected exception should degrade to unknown, not propagate"
+    return 1
+
+
 def check_registry_integrity():
     ids = [c.id for c in ALL_CHECKS]
     assert len(ids) == len(set(ids)), f"duplicate check ids: {ids}"
@@ -68,6 +82,7 @@ def main():
                      ("score excludes unknown/N/A", check_score_excludes_unknown_and_na),
                      ("score is None, not 0, when nothing applicable", check_score_none_when_nothing_applicable),
                      ("ranked gaps ordering", check_ranked_gaps_severity_order),
+                     ("run_all isolates a broken check", check_run_all_isolates_a_broken_check),
                      ("registry integrity", check_registry_integrity)]:
         n = fn()
         total += n

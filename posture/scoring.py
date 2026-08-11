@@ -8,12 +8,21 @@ machine with three unknowns and everything else passing shows a real score
 for what it could actually verify, with the gaps stated separately rather
 than folded into a number that would misrepresent them either way.
 """
-from .checks.base import SEVERITY_WEIGHT, STATUS_FAIL, STATUS_PASS
+from .checks.base import SEVERITY_WEIGHT, STATUS_FAIL, STATUS_PASS, STATUS_UNKNOWN, CheckResult
 
 
 def run_all(checks):
-    """[(check, CheckResult), ...] for every check in the registry."""
-    return [(c, c.read()) for c in checks]
+    """[(check, CheckResult), ...] for every check in the registry. A bug in
+    one check's read() (not a subprocess failure, which read() already
+    handles — an actual unexpected exception) must not take the other seven
+    results down with it, so each read runs in its own try/except."""
+    results = []
+    for c in checks:
+        try:
+            results.append((c, c.read()))
+        except Exception as e:
+            results.append((c, CheckResult(STATUS_UNKNOWN, f"This check hit an unexpected error: {e}")))
+    return results
 
 
 def score(results):
