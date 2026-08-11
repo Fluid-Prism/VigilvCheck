@@ -12,8 +12,8 @@ import platform
 from .base import Check, CheckResult, STATUS_FAIL, STATUS_PASS, STATUS_UNKNOWN, run
 
 
-def _macos_read():
-    out = run(["fdesetup", "status"]).strip()
+def parse_fdesetup(out):
+    out = out.strip()
     if out.lower().startswith("filevault is on"):
         return CheckResult(STATUS_PASS, out)
     if out.lower().startswith("filevault is off"):
@@ -21,16 +21,24 @@ def _macos_read():
     return CheckResult(STATUS_UNKNOWN, f"Couldn't parse fdesetup output: {out or '(empty)'}")
 
 
-def _linux_read():
-    root_src = run(["findmnt", "-no", "SOURCE", "/"]).strip()
-    if not root_src:
-        return CheckResult(STATUS_UNKNOWN, "Couldn't determine the root filesystem's block device.")
-    kind = run(["lsblk", "-no", "TYPE", root_src]).strip()
+def _macos_read():
+    return parse_fdesetup(run(["fdesetup", "status"]))
+
+
+def parse_lsblk_type(kind, root_src):
+    kind = kind.strip()
     if "crypt" in kind:
         return CheckResult(STATUS_PASS, f"Root filesystem ({root_src}) is on an encrypted (dm-crypt) volume.")
     if kind:
         return CheckResult(STATUS_FAIL, f"Root filesystem ({root_src}) doesn't appear to be encrypted.")
     return CheckResult(STATUS_UNKNOWN, f"Couldn't read the device type for {root_src}.")
+
+
+def _linux_read():
+    root_src = run(["findmnt", "-no", "SOURCE", "/"]).strip()
+    if not root_src:
+        return CheckResult(STATUS_UNKNOWN, "Couldn't determine the root filesystem's block device.")
+    return parse_lsblk_type(run(["lsblk", "-no", "TYPE", root_src]), root_src)
 
 
 def read():

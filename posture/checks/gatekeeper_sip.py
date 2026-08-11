@@ -17,15 +17,19 @@ import platform
 from .base import Check, CheckResult, STATUS_FAIL, STATUS_NA, STATUS_PASS, STATUS_UNKNOWN, run
 
 
-def _gatekeeper_read():
-    if platform.system() != "Darwin":
-        return CheckResult(STATUS_NA, "Gatekeeper is macOS-specific.")
-    out = run(["spctl", "--status"]).strip()
+def parse_spctl(out):
+    out = out.strip()
     if "assessments enabled" in out:
         return CheckResult(STATUS_PASS, "Gatekeeper is enabled.")
     if "assessments disabled" in out:
         return CheckResult(STATUS_FAIL, "Gatekeeper is disabled.")
     return CheckResult(STATUS_UNKNOWN, f"Couldn't parse spctl output: {out or '(empty)'}")
+
+
+def _gatekeeper_read():
+    if platform.system() != "Darwin":
+        return CheckResult(STATUS_NA, "Gatekeeper is macOS-specific.")
+    return parse_spctl(run(["spctl", "--status"]))
 
 
 def _gatekeeper_remediation():
@@ -47,15 +51,19 @@ GATEKEEPER_CHECK = Check(
 )
 
 
-def _sip_read():
-    if platform.system() != "Darwin":
-        return CheckResult(STATUS_NA, "System Integrity Protection is macOS-specific.")
-    out = run(["csrutil", "status"]).strip()
+def parse_csrutil(out):
+    out = out.strip()
     if "enabled" in out.lower():
         return CheckResult(STATUS_PASS, "System Integrity Protection is enabled.")
     if "disabled" in out.lower():
         return CheckResult(STATUS_FAIL, "System Integrity Protection is disabled.")
     return CheckResult(STATUS_UNKNOWN, f"Couldn't parse csrutil output: {out or '(empty)'}")
+
+
+def _sip_read():
+    if platform.system() != "Darwin":
+        return CheckResult(STATUS_NA, "System Integrity Protection is macOS-specific.")
+    return parse_csrutil(run(["csrutil", "status"]))
 
 
 def _sip_remediation():

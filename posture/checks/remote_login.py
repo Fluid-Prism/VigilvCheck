@@ -19,25 +19,27 @@ import re
 from .base import Check, CheckResult, STATUS_FAIL, STATUS_PASS, STATUS_UNKNOWN, have, try_sudo_n
 
 
+def parse_systemsetup(out):
+    """None means the output didn't give a definitive on/off answer at all —
+    distinct from the caller not having permission to ask in the first place."""
+    if "On" in out:
+        return CheckResult(STATUS_FAIL, "Remote Login (SSH) is on.")
+    if "Off" in out:
+        return CheckResult(STATUS_PASS, "Remote Login (SSH) is off.")
+    return None
+
+
 def _macos_read():
     ok, out = try_sudo_n(["systemsetup", "-getremotelogin"])
     if ok:
-        if "On" in out:
-            return CheckResult(STATUS_FAIL, "Remote Login (SSH) is on.")
-        if "Off" in out:
-            return CheckResult(STATUS_PASS, "Remote Login (SSH) is off.")
+        result = parse_systemsetup(out)
+        if result:
+            return result
     return CheckResult(STATUS_UNKNOWN, "Checking this needs administrator access. Run "
                                        "`sudo systemsetup -getremotelogin` yourself to see the answer.")
 
 
-def _linux_read():
-    if not (have("sshd") or os.path.isfile("/etc/ssh/sshd_config")):
-        return CheckResult(STATUS_PASS, "No SSH server installed. Nothing to harden here.")
-    try:
-        content = open("/etc/ssh/sshd_config").read()
-    except OSError:
-        return CheckResult(STATUS_UNKNOWN, "sshd_config exists but isn't readable.")
-
+def parse_sshd_config(content):
     root_login = re.search(r"(?m)^\s*PermitRootLogin\s+(\S+)", content)
     password_auth = re.search(r"(?m)^\s*PasswordAuthentication\s+(\S+)", content)
     problems, unclear = [], []
@@ -60,6 +62,16 @@ def _linux_read():
         return CheckResult(STATUS_UNKNOWN, "; ".join(unclear) + " — depends on your OpenSSH "
                                            "version's compiled-in default.")
     return CheckResult(STATUS_PASS, "sshd_config explicitly disables root login and password auth.")
+
+
+def _linux_read():
+    if not (have("sshd") or os.path.isfile("/etc/ssh/sshd_config")):
+        return CheckResult(STATUS_PASS, "No SSH server installed. Nothing to harden here.")
+    try:
+        content = open("/etc/ssh/sshd_config").read()
+    except OSError:
+        return CheckResult(STATUS_UNKNOWN, "sshd_config exists but isn't readable.")
+    return parse_sshd_config(content)
 
 
 def read():

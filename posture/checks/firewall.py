@@ -12,8 +12,8 @@ import platform
 from .base import Check, CheckResult, STATUS_FAIL, STATUS_PASS, STATUS_UNKNOWN, have, run
 
 
-def _macos_read():
-    out = run(["/usr/libexec/ApplicationFirewall/socketfilterfw", "--getglobalstate"]).strip()
+def parse_socketfilterfw(out):
+    out = out.strip()
     if "enabled" in out.lower():
         return CheckResult(STATUS_PASS, out)
     if "disabled" in out.lower():
@@ -21,19 +21,38 @@ def _macos_read():
     return CheckResult(STATUS_UNKNOWN, f"Couldn't parse socketfilterfw output: {out or '(empty)'}")
 
 
+def _macos_read():
+    return parse_socketfilterfw(run(["/usr/libexec/ApplicationFirewall/socketfilterfw", "--getglobalstate"]))
+
+
+def parse_ufw_status(out):
+    """None means ufw's output didn't give a definitive answer — the caller
+    should fall through to the next front end, not treat that as unknown yet."""
+    if "Status: active" in out:
+        return CheckResult(STATUS_PASS, "ufw is active.")
+    if "Status: inactive" in out:
+        return CheckResult(STATUS_FAIL, "ufw is installed but inactive.")
+    return None
+
+
+def parse_firewalld_state(out):
+    out = out.strip()
+    if out == "running":
+        return CheckResult(STATUS_PASS, "firewalld is running.")
+    if out == "not running":
+        return CheckResult(STATUS_FAIL, "firewalld is installed but not running.")
+    return None
+
+
 def _linux_read():
     if have("ufw"):
-        out = run(["ufw", "status"])
-        if "Status: active" in out:
-            return CheckResult(STATUS_PASS, "ufw is active.")
-        if "Status: inactive" in out:
-            return CheckResult(STATUS_FAIL, "ufw is installed but inactive.")
+        result = parse_ufw_status(run(["ufw", "status"]))
+        if result:
+            return result
     if have("firewall-cmd"):
-        out = run(["firewall-cmd", "--state"]).strip()
-        if out == "running":
-            return CheckResult(STATUS_PASS, "firewalld is running.")
-        if out == "not running":
-            return CheckResult(STATUS_FAIL, "firewalld is installed but not running.")
+        result = parse_firewalld_state(run(["firewall-cmd", "--state"]))
+        if result:
+            return result
     return CheckResult(STATUS_UNKNOWN, "No ufw or firewalld found. This machine might be using "
                                        "nftables or iptables directly, which this check doesn't parse.")
 

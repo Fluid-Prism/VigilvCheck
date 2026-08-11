@@ -13,13 +13,36 @@ import re
 from .base import Check, CheckResult, STATUS_FAIL, STATUS_PASS, STATUS_UNKNOWN, run
 
 
-def _macos_read():
-    out = run(["defaults", "read", "/Library/Preferences/com.apple.loginwindow", "GuestEnabled"]).strip()
+def parse_guest_enabled(out):
+    out = out.strip()
     if out == "0":
         return CheckResult(STATUS_PASS, "Guest account is disabled.")
     if out == "1":
         return CheckResult(STATUS_FAIL, "Guest account is enabled.")
     return CheckResult(STATUS_UNKNOWN, "Couldn't read the guest account setting.")
+
+
+def _macos_read():
+    return parse_guest_enabled(run(["defaults", "read", "/Library/Preferences/com.apple.loginwindow",
+                                    "GuestEnabled"]))
+
+
+def parse_passwd_and_lightdm(passwd_content, lightdm_content):
+    """lightdm_content is None when lightdm.conf doesn't exist (or isn't
+    readable) — not the same as an empty file, though this check treats
+    both as "nothing to flag" since there's nothing there to be enabled."""
+    problems = []
+    extra_root = [line.split(":")[0] for line in passwd_content.splitlines()
+                 if len(line.split(":")) > 2 and line.split(":")[2] == "0" and line.split(":")[0] != "root"]
+    if extra_root:
+        problems.append(f"extra UID-0 account(s): {', '.join(extra_root)}")
+
+    if lightdm_content and re.search(r"(?m)^\s*allow-guest\s*=\s*true", lightdm_content):
+        problems.append("lightdm allow-guest is enabled")
+
+    if problems:
+        return CheckResult(STATUS_FAIL, "; ".join(problems) + ".")
+    return CheckResult(STATUS_PASS, "No extra UID-0 accounts, no lightdm guest session enabled.")
 
 
 def _linux_read():
@@ -28,24 +51,14 @@ def _linux_read():
     except OSError:
         return CheckResult(STATUS_UNKNOWN, "Couldn't read /etc/passwd.")
 
-    problems = []
-    extra_root = [line.split(":")[0] for line in passwd.splitlines()
-                 if len(line.split(":")) > 2 and line.split(":")[2] == "0" and line.split(":")[0] != "root"]
-    if extra_root:
-        problems.append(f"extra UID-0 account(s): {', '.join(extra_root)}")
-
-    lightdm_conf = "/etc/lightdm/lightdm.conf"
-    if os.path.isfile(lightdm_conf):
+    lightdm_content = None
+    if os.path.isfile("/etc/lightdm/lightdm.conf"):
         try:
-            conf = open(lightdm_conf).read()
+            lightdm_content = open("/etc/lightdm/lightdm.conf").read()
         except OSError:
-            conf = ""
-        if re.search(r"(?m)^\s*allow-guest\s*=\s*true", conf):
-            problems.append("lightdm allow-guest is enabled")
+            lightdm_content = None
 
-    if problems:
-        return CheckResult(STATUS_FAIL, "; ".join(problems) + ".")
-    return CheckResult(STATUS_PASS, "No extra UID-0 accounts, no lightdm guest session enabled.")
+    return parse_passwd_and_lightdm(passwd, lightdm_content)
 
 
 def read():

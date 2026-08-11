@@ -15,8 +15,7 @@ from .base import Check, CheckResult, STATUS_FAIL, STATUS_PASS, STATUS_UNKNOWN, 
 _MAX_REASONABLE_DELAY_SECONDS = 300  # 5 minutes
 
 
-def _macos_read():
-    err = run_stderr(["sysadminctl", "-screenLock", "status"])
+def parse_sysadminctl(err):
     m = re.search(r"screenLock delay is (\d+) seconds?", err)
     if m:
         delay = int(m.group(1))
@@ -28,17 +27,26 @@ def _macos_read():
     return CheckResult(STATUS_UNKNOWN, f"Couldn't parse sysadminctl's answer: {err.strip() or '(no output)'}")
 
 
+def _macos_read():
+    return parse_sysadminctl(run_stderr(["sysadminctl", "-screenLock", "status"]))
+
+
+def parse_gnome_lock(lock_enabled, delay):
+    lock_enabled = lock_enabled.strip()
+    if lock_enabled == "":
+        return CheckResult(STATUS_UNKNOWN, "Couldn't read GNOME screensaver settings.")
+    if lock_enabled == "true":
+        return CheckResult(STATUS_PASS, f"GNOME screen lock is enabled (idle-delay: {delay.strip() or 'unknown'}).")
+    return CheckResult(STATUS_FAIL, "GNOME screen lock is disabled.")
+
+
 def _linux_read():
     if not have("gsettings"):
         return CheckResult(STATUS_UNKNOWN, "gsettings not found — not a GNOME session, "
                                            "can't check screen lock this way.")
-    lock_enabled = run(["gsettings", "get", "org.gnome.desktop.screensaver", "lock-enabled"]).strip()
-    if lock_enabled == "":
-        return CheckResult(STATUS_UNKNOWN, "Couldn't read GNOME screensaver settings.")
-    if lock_enabled == "true":
-        delay = run(["gsettings", "get", "org.gnome.desktop.session", "idle-delay"]).strip()
-        return CheckResult(STATUS_PASS, f"GNOME screen lock is enabled (idle-delay: {delay or 'unknown'}).")
-    return CheckResult(STATUS_FAIL, "GNOME screen lock is disabled.")
+    lock_enabled = run(["gsettings", "get", "org.gnome.desktop.screensaver", "lock-enabled"])
+    delay = run(["gsettings", "get", "org.gnome.desktop.session", "idle-delay"])
+    return parse_gnome_lock(lock_enabled, delay)
 
 
 def read():
