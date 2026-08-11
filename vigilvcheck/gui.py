@@ -33,18 +33,18 @@ from .scoring import run_all, score
 
 PALETTES = {
     "dark": {
-        "bg": "#0B0F14", "surface": "#121820", "surface_alt": "#0E141B",
-        "border": "#212B37", "text": "#E7EDF3", "text_muted": "#7C8B9C",
-        "accent": "#45D8C4", "accent_ink": "#06201C",
-        "danger": "#F2545B", "warning": "#F5A623", "success": "#34D399",
-        "row_fail_bg": "#241419", "shadow": (0, 0, 0, 110),
+        "bg": "#0F1220", "surface": "#171B2E", "surface_alt": "#12152A",
+        "border": "#2B2F48", "text": "#EDE9DD", "text_muted": "#8B87A3",
+        "accent": "#E7B84F", "accent_ink": "#241505",
+        "danger": "#E2555A", "warning": "#D9722E", "success": "#8CB369",
+        "row_fail_bg": "#2A1614", "shadow": (0, 0, 0, 130),
     },
     "light": {
-        "bg": "#F6F8FA", "surface": "#FFFFFF", "surface_alt": "#EEF2F5",
-        "border": "#DCE3E9", "text": "#16202B", "text_muted": "#5B6B7C",
-        "accent": "#0E9488", "accent_ink": "#FFFFFF",
-        "danger": "#D8394A", "warning": "#B96C08", "success": "#12946B",
-        "row_fail_bg": "#FCEBEC", "shadow": (30, 40, 60, 45),
+        "bg": "#FAF5EA", "surface": "#FFFDF6", "surface_alt": "#F2EAD8",
+        "border": "#E4D9BE", "text": "#241C10", "text_muted": "#7A6F58",
+        "accent": "#A9720F", "accent_ink": "#FFFFFF",
+        "danger": "#B8393A", "warning": "#A85A1E", "success": "#4F7A3D",
+        "row_fail_bg": "#F7E9E4", "shadow": (60, 45, 20, 40),
     },
 }
 
@@ -66,37 +66,39 @@ def _build_qss(c):
     return f"""
 QMainWindow, QWidget {{ background: {c['bg']}; color: {c['text']};
     font-family: -apple-system, 'Segoe UI', sans-serif; font-size: 13px; }}
-#Title {{ font-size: 24px; font-weight: 700; color: {c['text']}; letter-spacing: -0.3px; }}
-#Eyebrow {{ color: {c['accent']}; font-size: 10px; font-weight: 700; letter-spacing: 2.2px; }}
+#Title {{ font-family: 'New York', Georgia, serif; font-size: 25px; font-weight: 600;
+    color: {c['text']}; letter-spacing: 0px; }}
+#Eyebrow {{ font-family: 'New York', Georgia, serif; color: {c['accent']}; font-size: 11px;
+    font-weight: 600; font-style: italic; letter-spacing: 1.6px; }}
 #Sub {{ color: {c['text_muted']}; font-size: 13px; }}
 QPushButton {{ background: {c['surface']}; color: {c['text']}; border: 1px solid {c['border']};
-    border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 500; }}
+    border-radius: 6px; padding: 8px 16px; font-size: 12px; font-weight: 500; }}
 QPushButton:hover {{ border-color: {c['accent']}; color: {c['accent']}; }}
 QPushButton:pressed {{ background: {c['surface_alt']}; }}
 QPushButton:disabled {{ color: {c['text_muted']}; border-color: {c['border']}; }}
 QPushButton#Primary {{ background: {c['accent']}; color: {c['accent_ink']}; border: none; font-weight: 700; }}
 QPushButton#Ghost {{ background: transparent; border: 1px solid transparent; padding: 8px 10px; }}
 QPushButton#Ghost:hover {{ background: {c['surface']}; border-color: {c['border']}; color: {c['text']}; }}
-QFrame#KpiCard {{ background: {c['surface']}; border: 1px solid {c['border']}; border-radius: 14px; }}
+QFrame#KpiCard {{ background: {c['surface']}; border: 1px solid {c['border']}; border-radius: 10px; }}
 QLabel#KpiVal {{ background: transparent; }}
 QLabel#KpiLbl {{ color: {c['text_muted']}; font-size: 10px; font-weight: 700; letter-spacing: 1.1px; background: transparent; }}
 QLabel#KpiTrend {{ font-size: 10px; font-weight: 600; background: transparent; }}
 QLabel#DetailBody {{ font-size: 12px; background: transparent; padding: 14px; }}
 QScrollArea {{ border: none; background: transparent; }}
 QLineEdit, QComboBox {{ background: {c['surface']}; color: {c['text']}; border: 1px solid {c['border']};
-    border-radius: 8px; padding: 7px 11px; font-size: 12px; }}
+    border-radius: 6px; padding: 7px 11px; font-size: 12px; }}
 QLineEdit:focus, QComboBox:focus {{ border-color: {c['accent']}; }}
 QComboBox::drop-down {{ border: none; width: 20px; }}
 QComboBox QAbstractItemView {{ background: {c['surface']}; color: {c['text']};
     border: 1px solid {c['border']}; selection-background-color: {_rgba(c['accent'], 35)}; }}
-QTableWidget {{ background: {c['surface']}; border: 1px solid {c['border']}; border-radius: 14px;
+QTableWidget {{ background: {c['surface']}; border: 1px solid {c['border']}; border-radius: 10px;
     gridline-color: {c['border']}; alternate-background-color: {c['surface_alt']}; }}
 QHeaderView::section {{ background: {c['surface']}; color: {c['text_muted']}; border: none;
     border-bottom: 1px solid {c['border']}; padding: 10px 10px; font-size: 10px;
     font-weight: 700; letter-spacing: 1.1px; }}
 QTableWidget::item {{ padding: 8px 10px; border-bottom: 1px solid {c['border']}; }}
 QTableWidget::item:selected {{ background: {_rgba(c['accent'], 40)}; }}
-QTabWidget::pane {{ border: 1px solid {c['border']}; border-radius: 14px; top: -1px; background: {c['surface']}; }}
+QTabWidget::pane {{ border: 1px solid {c['border']}; border-radius: 10px; top: -1px; background: {c['surface']}; }}
 QTabBar::tab {{ background: transparent; color: {c['text_muted']}; padding: 8px 16px;
     margin-right: 2px; border: none; border-bottom: 2px solid transparent; font-size: 12px; font-weight: 500; }}
 QTabBar::tab:selected {{ color: {c['text']}; border-bottom: 2px solid {c['accent']}; }}
@@ -132,30 +134,88 @@ class _Worker(QRunnable):
             self.signals.error.emit(traceback.format_exc().strip().splitlines()[-1])
 
 
+class ScoreRing(QWidget):
+    """A hand-painted circular gauge — the one KPI (score) that gets a
+    distinct treatment from the other three, since it's the number this
+    whole app exists to produce. Fills clockwise from the top like a wax
+    seal closing, in keeping with an audit that's either sealed or isn't."""
+    def __init__(self):
+        super().__init__()
+        self.setFixedSize(60, 60)
+        self._value = None
+        self._ring_hex = "#E7B84F"
+        self._track_hex = "#2B2F48"
+        self._text_hex = "#EDE9DD"
+
+    def set_theme(self, ring_hex, track_hex, text_hex):
+        self._ring_hex, self._track_hex, self._text_hex = ring_hex, track_hex, text_hex
+        self.update()
+
+    def setText(self, s):
+        """Duck-types QLabel.setText so the existing KPI value-animation
+        code (`value_label.setText(str(int(val)))`) drives this unchanged
+        regardless of which KPI card it's attached to."""
+        try:
+            self._value = max(0, min(100, int(s)))
+        except (TypeError, ValueError):
+            self._value = None
+        self.update()
+
+    def paintEvent(self, _event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        rect = self.rect().adjusted(5, 5, -5, -5)
+        pen_w = 5
+
+        track_pen = QPen(QColor(self._track_hex))
+        track_pen.setWidth(pen_w)
+        track_pen.setCapStyle(Qt.RoundCap)
+        painter.setPen(track_pen)
+        painter.drawArc(rect, 0, 360 * 16)
+
+        if self._value is not None:
+            ring_pen = QPen(QColor(self._ring_hex))
+            ring_pen.setWidth(pen_w)
+            ring_pen.setCapStyle(Qt.RoundCap)
+            painter.setPen(ring_pen)
+            painter.drawArc(rect, 90 * 16, -int(360 * 16 * self._value / 100))
+
+        painter.setPen(QColor(self._text_hex))
+        font = painter.font()
+        font.setBold(True)
+        font.setPointSize(12)
+        painter.setFont(font)
+        painter.drawText(self.rect(), Qt.AlignCenter, str(self._value) if self._value is not None else "—")
+        painter.end()
+
+
 class KpiCard(QFrame):
-    """One stat card: accent top bar + big monospace number + muted label,
-    hover deepens its shadow. Same widget shape as Kevscope's, since this is
-    exactly the kind of small proven pattern worth reusing across sibling
-    apps without formally sharing code for it."""
-    def __init__(self, label_text):
+    """One stat card: left accent bar + number/ring + muted label, hover
+    deepens its shadow. `ring=True` (score only) swaps the plain monospace
+    number for a painted seal gauge instead."""
+    def __init__(self, label_text, ring=False):
         super().__init__()
         self.setObjectName("KpiCard")
+        self.ring = ring
 
         self.bar = QFrame()
-        self.bar.setFixedHeight(3)
+        self.bar.setFixedWidth(3)
 
         body = QWidget()
         bl = QVBoxLayout(body)
         bl.setContentsMargins(16, 13, 16, 14)
         bl.setSpacing(6)
 
-        self.value_label = QLabel("—")
-        self.value_label.setObjectName("KpiVal")
-        mono = QFont("Menlo")
-        mono.setStyleHint(QFont.Monospace)
-        mono.setPointSize(21)
-        mono.setWeight(QFont.DemiBold)
-        self.value_label.setFont(mono)
+        if ring:
+            self.value_label = ScoreRing()
+        else:
+            self.value_label = QLabel("—")
+            self.value_label.setObjectName("KpiVal")
+            mono = QFont("Menlo")
+            mono.setStyleHint(QFont.Monospace)
+            mono.setPointSize(21)
+            mono.setWeight(QFont.DemiBold)
+            self.value_label.setFont(mono)
 
         self.label_widget = QLabel(label_text)
         self.label_widget.setObjectName("KpiLbl")
@@ -168,11 +228,11 @@ class KpiCard(QFrame):
         bl.addWidget(self.label_widget)
         bl.addWidget(self.trend_label)
 
-        outer = QVBoxLayout(self)
+        outer = QHBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
         outer.addWidget(self.bar)
-        outer.addWidget(body)
+        outer.addWidget(body, 1)
 
         self._shadow = QGraphicsDropShadowEffect(self)
         self._shadow.setOffset(0, 5)
@@ -182,10 +242,13 @@ class KpiCard(QFrame):
         self._shadow_anim.setDuration(160)
         self._shadow_anim.setEasingCurve(QEasingCurve.OutCubic)
 
-    def set_theme(self, accent_hex, shadow_rgba):
-        self.value_label.setStyleSheet(f"color:{accent_hex}")
-        self.bar.setStyleSheet(f"background:{accent_hex}; border-top-left-radius:14px; "
-                               f"border-top-right-radius:14px;")
+    def set_theme(self, accent_hex, shadow_rgba, track_hex=None, text_hex=None):
+        if self.ring:
+            self.value_label.set_theme(accent_hex, track_hex, text_hex)
+        else:
+            self.value_label.setStyleSheet(f"color:{accent_hex}")
+        self.bar.setStyleSheet(f"background:{accent_hex}; border-top-left-radius:10px; "
+                               f"border-bottom-left-radius:10px;")
         self._shadow.setColor(QColor(*shadow_rgba))
 
     def set_trend(self, text, color_hex):
@@ -221,7 +284,7 @@ class Sparkline(QWidget):
         super().__init__()
         self.setMinimumHeight(140)
         self._points = []           # [(ts, score_or_None, applicable), ...] most-recent-first
-        self._line_hex = "#45D8C4"
+        self._line_hex = "#E7B84F"
         self._text_hex = "#7C8B9C"
 
     def set_theme(self, line_hex, text_hex):
@@ -348,7 +411,7 @@ class MainWindow(QMainWindow):
         krow = QHBoxLayout(); krow.setSpacing(14)
         for key, label in [("score", "POSTURE SCORE"), ("passed", "CHECKS PASSED"),
                            ("gaps", "GAPS FOUND"), ("unknown", "COULDN'T DETERMINE")]:
-            card = KpiCard(label)
+            card = KpiCard(label, ring=(key == "score"))
             krow.addWidget(card)
             self.kpi_cards[key] = card
         v.addLayout(krow)
@@ -438,7 +501,7 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(_build_qss(self.c))
         self.btn_theme.setText("☾  Dark" if name == "light" else "☀  Light")
         for key, role in KPI_ROLES.items():
-            self.kpi_cards[key].set_theme(self.c[role], self.c["shadow"])
+            self.kpi_cards[key].set_theme(self.c[role], self.c["shadow"], self.c["border"], self.c["text"])
         self._refresh_history()
         if not first_load:
             if self._rendered_rows:
