@@ -1,4 +1,4 @@
-"""audit.py — headless CLI. `python3 -m posture.audit`.
+"""audit.py — headless CLI. `python3 -m vigilvcheck.audit`.
 
 Runs every check, scores what it can, prints the ranked gap list, records
 the run to local history.

@@ -1,20 +1,20 @@
-# Contributing to Posture
+# Contributing to VigilvCheck
 
 ## Dev setup
 
 ```bash
 git clone <this repo>
-cd posture
+cd vigilvcheck
 pip install -r requirements.txt
 
-python3 -m posture                   # launch the desktop app
-python3 -m posture.audit             # or the headless CLI
-python3 -m posture.selftest          # offline checks, run these before every PR
+python3 -m vigilvcheck                   # launch the desktop app
+python3 -m vigilvcheck.audit             # or the headless CLI
+python3 -m vigilvcheck.selftest          # offline checks, run these before every PR
 ```
 
 ## Tests
 
-`posture/selftest.py` covers the logic that doesn't depend on your specific
+`vigilvcheck/selftest.py` covers the logic that doesn't depend on your specific
 machine: scoring math and registry integrity. It can't meaningfully test
 the checks themselves offline, since each one reads real system state — if
 you add a check, the honest test is running it on the platform it targets

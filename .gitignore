@@ -1,6 +1,6 @@
-posture.db
-posture.db-shm
-posture.db-wal
+vigilvcheck.db
+vigilvcheck.db-shm
+vigilvcheck.db-wal
 __pycache__/
 *.pyc
 .venv/

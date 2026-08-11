@@ -1,4 +1,4 @@
-"""gui.py — posture auditor desktop app (PySide6).
+"""gui.py — VigilvCheck desktop app (PySide6).
 
 Same design system as Kevscope (its sibling app, separate codebase on
 purpose): a cool, token-driven light/dark theme, tabs instead of a side
@@ -7,7 +7,7 @@ with QPropertyAnimation/QVariantAnimation since Qt Style Sheets have no CSS
 transitions. Reused as a pattern, not imported — two projects isn't enough
 signal yet to know what should actually be a shared library.
 
-Launch:  python3 -m posture        (or python3 -m posture.gui)
+Launch:  python3 -m vigilvcheck        (or python3 -m vigilvcheck.gui)
 """
 import html
 import sys
@@ -279,7 +279,7 @@ KPI_ROLES = {"score": "accent", "passed": "success", "gaps": "danger", "unknown"
 class MainWindow(QMainWindow):
     def __init__(self, auto_scan=True):
         super().__init__()
-        self.setWindowTitle("Posture")
+        self.setWindowTitle("VigilvCheck")
         self.resize(1000, 660)
         self.pool = QThreadPool.globalInstance()
         self._results = []
@@ -290,7 +290,7 @@ class MainWindow(QMainWindow):
         self._anim_refs = []
         self._workers = []
 
-        self._settings = QSettings("Fluid-Prism", "Posture")
+        self._settings = QSettings("Fluid-Prism", "VigilvCheck")
         saved = self._settings.value("theme")
         self.theme = saved if saved in PALETTES else self._detect_system_theme()
         self.c = PALETTES[self.theme]
@@ -696,7 +696,7 @@ class MainWindow(QMainWindow):
 def main():
     warn_if_root()
     app = QApplication(sys.argv)
-    app.setApplicationName("Posture")
+    app.setApplicationName("VigilvCheck")
     win = MainWindow()
     win.show()
     sys.exit(app.exec())

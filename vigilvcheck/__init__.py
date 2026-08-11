@@ -1,4 +1,4 @@
-"""posture — a local security-posture auditor and guided hardener.
+"""vigilvcheck — a local security-posture auditor and guided hardener.
 
 Checks this machine against a set of well-known hardening basics (disk
 encryption, firewall, automatic updates, screen lock, remote login,
@@ -8,8 +8,8 @@ fix. It doesn't run any fix for you — see SECURITY.md for why that's a
 deliberate line, not a missing feature, in this first version.
 
 Local-first: every read happens on this machine, nothing is uploaded
-anywhere. Runs as a CLI (`python3 -m posture.audit`) or a desktop app
-(`python3 -m posture`).
+anywhere. Runs as a CLI (`python3 -m vigilvcheck.audit`) or a desktop app
+(`python3 -m vigilvcheck`).
 """
 import os
 import sys

@@ -10,7 +10,7 @@ import sqlite3
 import threading
 import time
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "posture.db")
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vigilvcheck.db")
 _lock = threading.Lock()
 
 

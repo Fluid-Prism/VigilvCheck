@@ -1,6 +1,6 @@
 # Security Policy
 
-Posture runs entirely on your own machine. It reads local system
+VigilvCheck runs entirely on your own machine. It reads local system
 configuration (FileVault/LUKS status, firewall state, update settings,
 screen lock, SSH config, account list, Gatekeeper/SIP status) and writes
 only its own scan history to a local SQLite file. It never sends anything
@@ -22,7 +22,7 @@ confirmed issues, sooner for anything actively exploitable.
 
 ## Scope
 
-In scope: anything that lets Posture be tricked into running unintended
+In scope: anything that lets VigilvCheck be tricked into running unintended
 commands, escalating privileges, leaking data anywhere, or misreporting a
 failing check as passing (a false "secure" is worse than a false alarm,
 given the whole point of this tool).
@@ -36,5 +36,5 @@ elevation come back "unknown" is the intended behavior.
 
 ## Supported versions
 
-Posture is pre-1.0, unreleased; only the latest commit on the default
+VigilvCheck is pre-1.0, unreleased; only the latest commit on the default
 branch is supported.

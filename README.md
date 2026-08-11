@@ -1,10 +1,10 @@
-# Posture
+# VigilvCheck
 
 A local desktop app that checks this machine against a set of well-known
 hardening basics, scores what it can actually determine, and explains each
 gap in plain English with a copy-paste fix. It's the sibling to
 [Kevscope](https://github.com/Fluid-Prism/Kevscope): Kevscope answers "what
-vulnerable software is on this machine," Posture answers "is this machine
+vulnerable software is on this machine," VigilvCheck answers "is this machine
 configured to resist an attack in the first place."
 
 It runs on the machine you launch it on. Nothing is uploaded anywhere —
@@ -33,9 +33,9 @@ about the limits of what it can see, not a hidden fail.
 pip install -r requirements.txt      # PySide6 (Qt) — no network dependency at all
 # or: pip install -e .
 
-python3 -m posture                   # launch the desktop app
-python3 -m posture.audit             # or the headless CLI
-python3 -m posture.selftest          # offline checks (scoring math + registry integrity)
+python3 -m vigilvcheck                   # launch the desktop app
+python3 -m vigilvcheck.audit             # or the headless CLI
+python3 -m vigilvcheck.selftest          # offline checks (scoring math + registry integrity)
 ```
 
 ## The checks
@@ -95,9 +95,9 @@ that order.
 ## Files
 
 ```
-posture/
-  gui.py            PySide6 desktop app   (python3 -m posture)
-  audit.py          headless CLI          (python3 -m posture.audit)
+vigilvcheck/
+  gui.py            PySide6 desktop app   (python3 -m vigilvcheck)
+  audit.py          headless CLI          (python3 -m vigilvcheck.audit)
   scoring.py         severity-weighted score + ranked gap list
   store.py           SQLite: scan history (owner-only file permissions)
   selftest.py         offline checks: scoring math + registry integrity

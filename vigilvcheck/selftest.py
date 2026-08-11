@@ -3,7 +3,7 @@ machine's actual state: scoring math and registry integrity. The checks
 themselves read real system state, so they're not something a fixed offline
 test can assert against the way a version comparator can.
 
-    python3 -m posture.selftest
+    python3 -m vigilvcheck.selftest
 """
 from .checks import ALL_CHECKS
 from .checks.base import SEVERITY_WEIGHT, STATUS_FAIL, STATUS_NA, STATUS_PASS, STATUS_UNKNOWN, Check, CheckResult

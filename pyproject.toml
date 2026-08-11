@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "posture"
+name = "vigilvcheck"
 version = "0.1.0"
 description = "Local security posture auditor: checks this machine against hardening basics, scores what it can determine, and explains each gap with a copy-paste fix."
 readme = "README.md"
@@ -27,10 +27,10 @@ dependencies = [
 ]
 
 [project.scripts]
-posture-audit = "posture.audit:main"
+vigilvcheck-audit = "vigilvcheck.audit:main"
 
 [project.gui-scripts]
-posture = "posture.gui:main"
+vigilvcheck = "vigilvcheck.gui:main"
 
 [tool.setuptools.packages.find]
-include = ["posture*"]
+include = ["vigilvcheck*"]
