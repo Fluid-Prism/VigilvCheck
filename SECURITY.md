@@ -15,7 +15,7 @@ Please **do not open a public GitHub issue** for a security report.
 Use GitHub's private vulnerability reporting instead, once this repo has a
 public home: repo → Security → Report a vulnerability.
 
-If that isn't available, email **godambevarun@gmail.com** with a
+If that isn't available, email **developers@fluidprism.com** with a
 description and, if possible, a minimal reproduction. We'll acknowledge
 within a few days and aim to have a fix or mitigation out within 30 days for
 confirmed issues, sooner for anything actively exploitable.
