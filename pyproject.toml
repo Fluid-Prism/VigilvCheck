@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "posture"
+version = "0.1.0"
+description = "Local security posture auditor: checks this machine against hardening basics, scores what it can determine, and explains each gap with a copy-paste fix."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+authors = [{ name = "Fluid-Prism" }]
+keywords = ["security", "hardening", "cis-benchmark", "posture", "audit"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: X11 Applications :: Qt",
+  "Environment :: MacOS X",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS :: MacOS X",
+  "Programming Language :: Python :: 3",
+  "Topic :: Security",
+]
+dependencies = [
+  "PySide6-Essentials>=6.6",
+]
+
+[project.scripts]
+posture-audit = "posture.audit:main"
+
+[project.gui-scripts]
+posture = "posture.gui:main"
+
+[tool.setuptools.packages.find]
+include = ["posture*"]

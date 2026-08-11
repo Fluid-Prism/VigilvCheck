@@ -1,0 +1,2 @@
+# Core engine: stdlib only. GUI: PySide6 (Qt).
+PySide6-Essentials>=6.6    # full PySide6 also works; Essentials is lighter
