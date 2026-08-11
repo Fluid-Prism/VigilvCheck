@@ -15,10 +15,10 @@ import time
 import traceback
 
 from PySide6.QtCore import (
-    Qt, QEasingCurve, QObject, QPropertyAnimation, QRunnable, QSettings,
-    QThreadPool, QTimer, QVariantAnimation, Signal, Slot,
+    Qt, QEasingCurve, QObject, QPointF, QPropertyAnimation, QRunnable,
+    QSettings, QThreadPool, QTimer, QVariantAnimation, Signal, Slot,
 )
-from PySide6.QtGui import QColor, QFont, QGuiApplication
+from PySide6.QtGui import QColor, QFont, QGuiApplication, QPainter, QPen
 from PySide6.QtWidgets import (
     QApplication, QComboBox, QFrame, QGraphicsDropShadowEffect,
     QGraphicsOpacityEffect, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
@@ -80,6 +80,7 @@ QPushButton#Ghost:hover {{ background: {c['surface']}; border-color: {c['border'
 QFrame#KpiCard {{ background: {c['surface']}; border: 1px solid {c['border']}; border-radius: 14px; }}
 QLabel#KpiVal {{ background: transparent; }}
 QLabel#KpiLbl {{ color: {c['text_muted']}; font-size: 10px; font-weight: 700; letter-spacing: 1.1px; background: transparent; }}
+QLabel#KpiTrend {{ font-size: 10px; font-weight: 600; background: transparent; }}
 QLabel#DetailBody {{ font-size: 12px; background: transparent; padding: 14px; }}
 QScrollArea {{ border: none; background: transparent; }}
 QLineEdit, QComboBox {{ background: {c['surface']}; color: {c['text']}; border: 1px solid {c['border']};
@@ -159,8 +160,13 @@ class KpiCard(QFrame):
         self.label_widget = QLabel(label_text)
         self.label_widget.setObjectName("KpiLbl")
 
+        self.trend_label = QLabel("")
+        self.trend_label.setObjectName("KpiTrend")
+        self.trend_label.hide()
+
         bl.addWidget(self.value_label)
         bl.addWidget(self.label_widget)
+        bl.addWidget(self.trend_label)
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
@@ -182,6 +188,16 @@ class KpiCard(QFrame):
                                f"border-top-right-radius:14px;")
         self._shadow.setColor(QColor(*shadow_rgba))
 
+    def set_trend(self, text, color_hex):
+        """text=None hides the trend line entirely (first scan ever, or a
+        KPI that doesn't track a trend) rather than showing a stale one."""
+        if text:
+            self.trend_label.setText(text)
+            self.trend_label.setStyleSheet(f"color:{color_hex}")
+            self.trend_label.show()
+        else:
+            self.trend_label.hide()
+
     def _animate_shadow(self, to):
         self._shadow_anim.stop()
         self._shadow_anim.setStartValue(self._shadow.blurRadius())
@@ -197,6 +213,65 @@ class KpiCard(QFrame):
         super().leaveEvent(event)
 
 
+class Sparkline(QWidget):
+    """A hand-painted line chart, oldest scan to newest, left to right. No
+    charting library dependency for what's fundamentally a dozen points and
+    a line — QPainter on a QWidget is the whole implementation."""
+    def __init__(self):
+        super().__init__()
+        self.setMinimumHeight(140)
+        self._points = []           # [(ts, score_or_None, applicable), ...] most-recent-first
+        self._line_hex = "#45D8C4"
+        self._text_hex = "#7C8B9C"
+
+    def set_theme(self, line_hex, text_hex):
+        self._line_hex = line_hex
+        self._text_hex = text_hex
+        self.update()
+
+    def set_data(self, history):
+        self._points = history
+        self.update()
+
+    def paintEvent(self, _event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        rect = self.rect()
+        scored = [(ts, s) for ts, s, _ in reversed(self._points) if s is not None]
+
+        if len(scored) < 2:
+            painter.setPen(QColor(self._text_hex))
+            msg = "Scan a few more times to see a trend here." if scored else "No scans recorded yet."
+            painter.drawText(rect, Qt.AlignCenter, msg)
+            painter.end()
+            return
+
+        pad_x, pad_y = 24, 20
+        w = max(rect.width() - 2 * pad_x, 1)
+        h = max(rect.height() - 2 * pad_y, 1)
+        n = len(scored)
+        pts = [QPointF(pad_x + (w * i / (n - 1)), pad_y + h * (1 - scored[i][1] / 100)) for i in range(n)]
+
+        pen = QPen(QColor(self._line_hex))
+        pen.setWidthF(2.0)
+        painter.setPen(pen)
+        for i in range(len(pts) - 1):
+            painter.drawLine(pts[i], pts[i + 1])
+
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(self._line_hex))
+        for p in pts:
+            painter.drawEllipse(p, 3, 3)
+
+        painter.setPen(QColor(self._text_hex))
+        painter.drawText(int(pad_x), int(rect.height() - 4), f"{scored[0][1]}")
+        last_label = f"{scored[-1][1]}"
+        fm = painter.fontMetrics()
+        painter.drawText(int(rect.width() - pad_x - fm.horizontalAdvance(last_label)),
+                         int(rect.height() - 4), last_label)
+        painter.end()
+
+
 COLS = ["Check", "Severity", "Status", "Detail"]
 KPI_ROLES = {"score": "accent", "passed": "success", "gaps": "danger", "unknown": "warning"}
 
@@ -210,6 +285,7 @@ class MainWindow(QMainWindow):
         self._results = []
         self._rendered_rows = []
         self.detail_tabs = {}
+        self._permanent_tabs = set()   # widgets that must never be closed, checked by identity, not index
         self._kpi_prev = {"score": 0, "passed": 0, "gaps": 0, "unknown": 0}
         self._anim_refs = []
         self._workers = []
@@ -309,6 +385,27 @@ class MainWindow(QMainWindow):
         self.tabs.tabCloseRequested.connect(self._close_tab)
         self.tabs.addTab(self.table, "Overview")
         self.tabs.tabBar().setTabButton(0, QTabBar.RightSide, None)
+        self._permanent_tabs.add(self.table)
+
+        history_tab = QWidget()
+        hl = QVBoxLayout(history_tab)
+        hl.setContentsMargins(16, 14, 16, 14)
+        hl.setSpacing(12)
+        self.sparkline = Sparkline()
+        hl.addWidget(self.sparkline)
+        self.history_list = QLabel()
+        self.history_list.setObjectName("DetailBody")
+        self.history_list.setWordWrap(True)
+        self.history_list.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        self.history_list.setTextFormat(Qt.RichText)
+        history_scroll = QScrollArea()
+        history_scroll.setWidgetResizable(True)
+        history_scroll.setWidget(self.history_list)
+        hl.addWidget(history_scroll, 1)
+        history_idx = self.tabs.addTab(history_tab, "History")
+        self.tabs.tabBar().setTabButton(history_idx, QTabBar.RightSide, None)
+        self._permanent_tabs.add(history_tab)
+
         v.addWidget(self.tabs, 1)
 
         self.statusBar().showMessage("Ready")
@@ -337,11 +434,50 @@ class MainWindow(QMainWindow):
         self.btn_theme.setText("☾  Dark" if name == "light" else "☀  Light")
         for key, role in KPI_ROLES.items():
             self.kpi_cards[key].set_theme(self.c[role], self.c["shadow"])
+        self._refresh_history()
         if not first_load:
             if self._rendered_rows:
                 self._recolor_table()
             for tab in self.detail_tabs.values():
                 self._render_detail_tab(tab)
+
+    def _refresh_history(self):
+        """Called after every scan and on every theme change — the sparkline
+        and score trend both depend on theme colors, and the trend depends
+        on data that changes with each new scan."""
+        history = store.score_history(limit=30)
+        self.sparkline.set_theme(self.c["accent"], self.c["text_muted"])
+        self.sparkline.set_data(history)
+        self._render_history_list(history)
+        self._update_score_trend(history)
+
+    def _render_history_list(self, history):
+        c = self.c
+        if not history:
+            self.history_list.setText(f"<div style='color:{c['text_muted']}'>No scans recorded yet.</div>")
+            return
+        rows = []
+        for ts, s, applicable in history:
+            when = time.strftime("%Y-%m-%d %H:%M", time.localtime(ts))
+            score_text = f"{s}/100" if s is not None else "—"
+            rows.append(f"<div><b>{_esc(when)}</b> &middot; {_esc(score_text)} "
+                        f"<span style='color:{c['text_muted']}'>({applicable} of {len(ALL_CHECKS)} "
+                        f"determinable)</span></div>")
+        self.history_list.setText("".join(rows))
+
+    def _update_score_trend(self, history):
+        scored = [(ts, s) for ts, s, _ in history if s is not None]
+        card = self.kpi_cards["score"]
+        if len(scored) < 2:
+            card.set_trend(None, self.c["text_muted"])
+            return
+        delta = scored[0][1] - scored[1][1]
+        if delta > 0:
+            card.set_trend(f"↑ +{delta} since last scan", self.c["success"])
+        elif delta < 0:
+            card.set_trend(f"↓ {delta} since last scan", self.c["danger"])
+        else:
+            card.set_trend("No change since last scan", self.c["text_muted"])
 
     def _fade(self, widget, start, end, duration, on_finished=None):
         effect = QGraphicsOpacityEffect(widget)
@@ -418,6 +554,7 @@ class MainWindow(QMainWindow):
 
         self._render()
         QTimer.singleShot(90, lambda: self._fade(self.table, 0.0, 1.0, 220))
+        QTimer.singleShot(260, self._refresh_history)   # just after the score KPI settles
         self.btn_scan.setEnabled(True)
         self.statusBar().showMessage(
             f"{passed} passed · {failed} need attention · {unknown} couldn't determine · "
@@ -520,9 +657,10 @@ class MainWindow(QMainWindow):
         tab["body"].setText(self._detail_html(tab["check"], tab["result"]))
 
     def _close_tab(self, index):
-        if index == 0:
-            return
         widget = self.tabs.widget(index)
+        if widget in self._permanent_tabs:
+            return   # Overview and History — checked by identity, not index, so this
+                     # can't silently stop protecting a tab if the tab order ever changes
         for key, tab in list(self.detail_tabs.items()):
             if tab["container"] is widget:
                 del self.detail_tabs[key]
