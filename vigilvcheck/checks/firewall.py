@@ -9,7 +9,8 @@ without parsing every rule in order).
 """
 import platform
 
-from .base import Check, CheckResult, STATUS_FAIL, STATUS_PASS, STATUS_UNKNOWN, have, run
+from .base import (Check, CheckResult, STATUS_FAIL, STATUS_NA, STATUS_PASS,
+                   STATUS_UNKNOWN, have, run)
 
 
 def parse_socketfilterfw(out):
@@ -70,6 +71,48 @@ def remediation():
             "    sudo systemctl enable --now firewalld\n\n"
             "If neither is installed, `sudo apt install ufw && sudo ufw enable` (Debian/Ubuntu) "
             "is the simplest way to get a sane default-deny baseline.")
+
+
+def parse_stealth_mode(out):
+    out = (out or "").strip().lower()
+    if "stealth mode is on" in out or "stealth mode is enabled" in out:
+        return CheckResult(STATUS_PASS, "Stealth mode is on — this machine doesn't answer "
+                                        "unsolicited probes.")
+    if "stealth mode is off" in out or "stealth mode is disabled" in out:
+        return CheckResult(STATUS_FAIL, "Stealth mode is off, so this machine answers pings "
+                                        "and probes from any network it's on.")
+    return CheckResult(STATUS_UNKNOWN, f"Couldn't parse the stealth mode setting: {out or '(empty)'}")
+
+
+def _stealth_read():
+    if platform.system() != "Darwin":
+        return CheckResult(STATUS_NA, "Stealth mode is a macOS Application Firewall feature. "
+                                      "The nearest Linux equivalent is an ICMP policy in your "
+                                      "own firewall rules, which varies too much to check here.")
+    return parse_stealth_mode(
+        run(["/usr/libexec/ApplicationFirewall/socketfilterfw", "--getstealthmode"]))
+
+
+def _stealth_remediation():
+    return ("Turn it on in System Settings → Network → Firewall → Options → Enable stealth "
+            "mode, or run:\n\n"
+            "    sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setstealthmode on\n\n"
+            "This stops the machine replying to pings and to probes on closed ports, so it "
+            "doesn't announce itself to anything scanning the network. It's a smaller win "
+            "than the firewall itself — someone on your network can still find you other "
+            "ways — but it costs nothing on a laptop that joins networks you don't control.")
+
+
+STEALTH_CHECK = Check(
+    id="firewall-stealth",
+    title="Firewall stealth mode",
+    rationale="With stealth mode off, this machine answers unsolicited pings and probes, "
+             "confirming it exists to anything sweeping the network it's joined.",
+    severity="low",
+    cis_topic="Host-based firewall / stealth mode",
+    read=_stealth_read,
+    remediation=_stealth_remediation,
+)
 
 
 CHECK = Check(

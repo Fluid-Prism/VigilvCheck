@@ -88,3 +88,45 @@ SIP_CHECK = Check(
     read=_sip_read,
     remediation=_sip_remediation,
 )
+
+
+def parse_authenticated_root(out):
+    out = (out or "").strip().lower()
+    if "enabled" in out:
+        return CheckResult(STATUS_PASS, "The system volume is sealed and verified at boot.")
+    if "disabled" in out:
+        return CheckResult(STATUS_FAIL, "The system volume seal is broken, so the OS is no "
+                                        "longer verified at boot.")
+    return CheckResult(STATUS_UNKNOWN, f"Couldn't parse csrutil's answer: {out or '(empty)'}")
+
+
+def _authenticated_root_read():
+    if platform.system() != "Darwin":
+        return CheckResult(STATUS_NA, "The signed system volume is macOS-specific.")
+    return parse_authenticated_root(run(["csrutil", "authenticated-root", "status"]))
+
+
+def _authenticated_root_remediation():
+    return ("Like SIP, this can only be changed from Recovery Mode — which is the point of "
+            "it, since a seal a running system could break isn't a seal.\n\n"
+            "  1. Restart and hold the power button (Apple silicon) or Cmd+R (Intel) until "
+            "you reach Recovery Mode\n"
+            "  2. Open Terminal from the Utilities menu\n"
+            "  3. Run: csrutil authenticated-root enable\n"
+            "  4. Restart normally\n\n"
+            "If this was turned off deliberately — some kernel extensions and system "
+            "modifications require it — that's a trade you've already made knowingly. It's "
+            "listed here so it's a decision rather than a surprise.")
+
+
+AUTHENTICATED_ROOT_CHECK = Check(
+    id="authenticated-root",
+    title="Signed system volume",
+    rationale="macOS ships the operating system on a cryptographically sealed volume that "
+             "is verified at every boot. With the seal broken, changes to the OS itself go "
+             "undetected — which is exactly what persistent malware wants.",
+    severity="high",
+    cis_topic="Signed system volume / boot integrity",
+    read=_authenticated_root_read,
+    remediation=_authenticated_root_remediation,
+)

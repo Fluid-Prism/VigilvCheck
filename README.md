@@ -19,7 +19,7 @@ history of past scans, kept in a local SQLite file only you can read.
 
 A weighted percentage of the checks below that passed, weighted by how much
 each one matters. That's it. A 100 means every check this tool knows how to
-run passed — it does not mean this machine is secure. This tool checks eight
+run passed — it does not mean this machine is secure. This tool checks twelve
 specific things. It doesn't check your passwords, your browser extensions,
 whether you click links in phishing emails, or a hundred other things that
 matter more day to day. Treat the score as "these particular basics are
@@ -47,13 +47,36 @@ python3 -m vigilvcheck.selftest          # offline checks (scoring math + regist
 | Check | Severity | macOS | Linux |
 | --- | --- | --- | --- |
 | Disk encryption | Critical | `fdesetup status` | root filesystem on a LUKS volume? |
-| Firewall | Medium | Application Firewall | ufw, then firewalld |
+| Automatic login | High | `com.apple.loginwindow` autoLoginUser | GDM, LightDM, SDDM config |
 | Automatic security updates | High | `com.apple.SoftwareUpdate` prefs | unattended-upgrades, then dnf-automatic |
-| Screen lock on sleep | Medium | `sysadminctl -screenLock status` | GNOME only, via gsettings |
 | Remote login (SSH) | High | needs admin access to read | `sshd_config` |
-| Guest / extra-privileged accounts | Medium | Guest account toggle | extra UID-0 accounts, lightdm guest session |
 | Gatekeeper | High | `spctl --status` | not applicable |
 | System Integrity Protection | High | `csrutil status` | not applicable |
+| Signed system volume | High | `csrutil authenticated-root status` | not applicable |
+| Backups configured | High | `tmutil destinationinfo` | not applicable — see below |
+| Firewall | Medium | Application Firewall | ufw, then firewalld |
+| Screen lock on sleep | Medium | `sysadminctl -screenLock status` | GNOME only, via gsettings |
+| Guest / extra-privileged accounts | Medium | Guest account toggle | extra UID-0 accounts, lightdm guest session |
+| Firewall stealth mode | Low | `socketfilterfw --getstealthmode` | not applicable |
+
+Two of these deserve a word, because they're the ones people are most
+surprised by.
+
+**Automatic login is the setting that decides whether disk encryption
+protects anything.** FileVault works because a powered-off machine can't be
+read without someone supplying a credential at boot. Automatic login
+supplies it for them, so a stolen laptop boots straight to a logged-in
+desktop and the encryption has bought nothing against the threat most people
+actually have.
+
+**Backups are the only check here about what happens after something goes
+wrong.** Everything else tries to keep an attacker out; this one is about
+ransomware, a dead disk, and a stolen laptop — the cases where prevention
+has already lost. There is no Linux equivalent worth pretending to check:
+backups there are restic, borg, rsync in cron, a NAS, or the distribution's
+own tool, and finding no configuration for any of them says nothing about
+whether backups exist. It reports not applicable rather than a confident
+"no backups" for a machine that's backed up perfectly well.
 
 The macOS reads were tested against a real machine while this was built.
 The Linux reads were written from documented behavior, not verified against
@@ -100,15 +123,21 @@ that order.
 
 ```
 vigilvcheck/
-  gui.py            PySide6 desktop app   (python3 -m vigilvcheck)
   audit.py          headless CLI          (python3 -m vigilvcheck.audit)
-  scoring.py         severity-weighted score + ranked gap list
-  store.py           SQLite: scan history (owner-only file permissions)
-  selftest.py         offline checks: scoring math + registry integrity
+  gui.py            desktop app entry     (python3 -m vigilvcheck)
+  scoring.py        severity-weighted score + ranked gap list
+  store.py          SQLite: scan history (owner-only file permissions)
+  selftest.py       offline tests: parse functions, scoring, registry
   checks/
-    base.py            the Check/CheckResult shape every check implements
-    disk_encryption.py, firewall.py, auto_updates.py, screen_lock.py,
-    remote_login.py, guest_account.py, gatekeeper_sip.py
+    base.py           the Check/CheckResult shape every check implements
+    disk_encryption.py, auto_login.py, firewall.py, auto_updates.py,
+    screen_lock.py, remote_login.py, guest_account.py, gatekeeper_sip.py,
+    backups.py
+  ui/
+    theme.py          design tokens and the stylesheet built from them
+    icons.py          icons drawn with QPainter — no assets, no dependency
+    widgets.py        nav rail, score ring, sparkline, drawer, item delegate
+    window.py         the shell: pages, master-detail, filters
 ```
 
 ## Adding a check
@@ -140,7 +169,5 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for dev setup and code style, and
 - Verify the Linux checks against real Debian, Fedora, and Arch installs
   instead of just documented behavior.
 - KDE and Wayland-generic screen lock detection.
-- Posture-over-time as an actual chart, not just a number in the history
-  table.
 - More checks: browser autofill/password-manager presence, SSH key
   strength, sudo timeout configuration.

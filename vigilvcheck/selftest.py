@@ -7,7 +7,8 @@ test can assert against the way a version comparator can.
 """
 from .checks import ALL_CHECKS
 from .checks.base import SEVERITY_WEIGHT, STATUS_FAIL, STATUS_NA, STATUS_PASS, STATUS_UNKNOWN, Check, CheckResult
-from .checks import auto_updates, disk_encryption, firewall, gatekeeper_sip, guest_account, remote_login, screen_lock
+from .checks import (auto_login, auto_updates, backups, disk_encryption, firewall,
+                     gatekeeper_sip, guest_account, remote_login, screen_lock)
 from .scoring import ranked_gaps, run_all, score
 
 
@@ -154,6 +155,52 @@ def check_parse_gatekeeper_sip():
     return 6
 
 
+def check_parse_auto_login():
+    """Absent key is the safe state on macOS: the setting is removed rather
+    than blanked when auto-login is turned off, so 'no such key' is a real
+    pass and must not be reported as unreadable."""
+    _assert(auto_login.parse_macos_autologin("", found=False), STATUS_PASS, "no autologin key")
+    _assert(auto_login.parse_macos_autologin("varun", found=True), STATUS_FAIL, "autologin set")
+    _assert(auto_login.parse_macos_autologin("", found=True), STATUS_UNKNOWN, "key present, unreadable")
+
+    _assert(auto_login.parse_linux_autologin({"/etc/gdm3/custom.conf": "AutomaticLoginEnable=true\n"}),
+            STATUS_FAIL, "gdm autologin on")
+    # GDM spells "off" by blanking the value rather than removing the key.
+    _assert(auto_login.parse_linux_autologin({"/etc/gdm3/custom.conf": "AutomaticLoginEnable=false\n"}),
+            STATUS_PASS, "gdm autologin false")
+    _assert(auto_login.parse_linux_autologin({"/etc/gdm3/custom.conf": "AutomaticLogin=\n"}),
+            STATUS_PASS, "gdm autologin empty value")
+    _assert(auto_login.parse_linux_autologin({"/etc/lightdm/lightdm.conf": "autologin-user=varun\n"}),
+            STATUS_FAIL, "lightdm autologin")
+    _assert(auto_login.parse_linux_autologin({"/etc/gdm3/custom.conf": None}),
+            STATUS_UNKNOWN, "no display manager config readable")
+    return 8
+
+
+def check_parse_backups():
+    _assert(backups.parse_tmutil_destinations("tmutil: No destinations configured."),
+            STATUS_FAIL, "no destination")
+    _assert(backups.parse_tmutil_destinations(
+        "Name          : Backup Drive\nKind          : Local\nID            : ABC"),
+            STATUS_PASS, "destination configured")
+    _assert(backups.parse_tmutil_destinations(""), STATUS_UNKNOWN, "empty output")
+    _assert(backups.parse_tmutil_destinations("something unexpected"), STATUS_UNKNOWN,
+            "unrecognised format")
+    return 4
+
+
+def check_parse_stealth_and_authenticated_root():
+    _assert(firewall.parse_stealth_mode("Firewall stealth mode is on"), STATUS_PASS, "stealth on")
+    _assert(firewall.parse_stealth_mode("Firewall stealth mode is off"), STATUS_FAIL, "stealth off")
+    _assert(firewall.parse_stealth_mode(""), STATUS_UNKNOWN, "stealth unreadable")
+    _assert(gatekeeper_sip.parse_authenticated_root("Authenticated Root status: enabled"),
+            STATUS_PASS, "ssv sealed")
+    _assert(gatekeeper_sip.parse_authenticated_root("Authenticated Root status: disabled"),
+            STATUS_FAIL, "ssv broken")
+    _assert(gatekeeper_sip.parse_authenticated_root(""), STATUS_UNKNOWN, "ssv unreadable")
+    return 6
+
+
 def check_registry_integrity():
     ids = [c.id for c in ALL_CHECKS]
     assert len(ids) == len(set(ids)), f"duplicate check ids: {ids}"
@@ -179,6 +226,9 @@ def main():
                      ("parse: remote login", check_parse_remote_login),
                      ("parse: guest account", check_parse_guest_account),
                      ("parse: gatekeeper/SIP", check_parse_gatekeeper_sip),
+                     ("parse: automatic login", check_parse_auto_login),
+                     ("parse: backups", check_parse_backups),
+                     ("parse: stealth + signed system volume", check_parse_stealth_and_authenticated_root),
                      ("registry integrity", check_registry_integrity)]:
         n = fn()
         total += n
